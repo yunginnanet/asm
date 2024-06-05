@@ -2,4 +2,4 @@
 
 package asm
 
-func ChecksumAVX2(data []byte) uint16
+func checksum(data []byte) uint16

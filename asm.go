@@ -5,7 +5,6 @@ package main
 import (
 	"fmt"
 
-	"github.com/mmcloughlin/avo/attr"
 	"github.com/mmcloughlin/avo/build"
 	"github.com/mmcloughlin/avo/gotypes"
 	"github.com/mmcloughlin/avo/operand"
@@ -39,10 +38,11 @@ import (
 type label string
 
 const (
-	loop      label = "loop"
-	remainder label = "remainder"
-	rLoop     label = "remainder_loop"
-	fin       label = "done"
+	loop       label = "loop"
+	remainder  label = "remainder"
+	rLoop      label = "remainder_loop"
+	fin        label = "done"
+	early_fail label = "early_fail"
 )
 
 func gp64() reg.Register {
@@ -62,7 +62,7 @@ func store(src reg.Register, dst gotypes.Component) {
 }
 
 func define(funcName string, argName string, argType string, ret string) {
-	build.TEXT(funcName, attr.NOSPLIT, fmt.Sprintf("func(%s %s) %s", argName, argType, ret))
+	build.TEXT(funcName, 0, fmt.Sprintf("func(%s %s) %s", argName, argType, ret))
 }
 
 func zero(reg reg.Register) {
@@ -115,10 +115,13 @@ func constant(value uint64) operand.Constant {
 }
 
 func main() {
-	define("ChecksumAVX2", "data", "[]byte", "uint16")
+	define("checksum", "data", "[]byte", "uint16")
 	input := build.Param("data")
 	data := operand.Mem{Base: build.Load(input.Base(), gp64())}
 	length := build.Load(input.Len(), gp64())
+
+	build.TESTQ(length, length)
+	build.JZ(to(fin))
 
 	// ===================================================
 	/*              REGISTER INITIALIZATION:            */
@@ -138,6 +141,7 @@ func main() {
 
 	// 256-bit vector register for data
 	vectorData := build.YMM()
+	zero(vectorData)
 
 	// ---------------------------------------------------
 
@@ -246,6 +250,16 @@ func main() {
 	build.ANDQ(operand.U32(0xFFFF), sum)
 
 	store(sum.As16(), build.ReturnIndex(0))
+	build.RET()
+
+	// ===================================================
+	/*                   EARLY FAIL:                    */
+	lbl(early_fail) // ===================================
+	retReg := build.GP16()
+	build.XORW(retReg, retReg)
+	build.MOVW(operand.U16(0), retReg)
+	build.Store(retReg, build.ReturnIndex(0))
+	build.RET()
 
 	build.Generate()
 }

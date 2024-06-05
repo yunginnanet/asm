@@ -1,4 +1,4 @@
-package hash
+package kayosasm
 
 func rfc1071(data []byte) uint16 {
 	dataSize := len(data)

@@ -1,6 +1,6 @@
 //go:build amd64
 
-package hash
+package kayosasm
 
 import (
 	"bufio"
@@ -174,7 +174,7 @@ func TestASMChecksumComponents(t *testing.T) {
 			}
 
 			test := `
-package hash
+package kayosasm
 import "testing"
 import "os"
 import "fmt"

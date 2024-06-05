@@ -2,7 +2,7 @@
 
 //go:build amd64
 
-package hash
+package kayosasm
 
 // calculate RFC 1071 internet checksum for a byte slice
 func checksum(data []byte) (sum uint16)

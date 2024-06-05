@@ -217,33 +217,38 @@ func TestChecksumTmp(t *testing.T) {
 			u16bChan := make(chan []byte, 1)
 			go readPipe(ctx, pipePath, u16bChan, t)
 			var tOut []byte
-			if tOut, err = cmd.CombinedOutput(); err != nil {
-				cancel()
-				t.Errorf(testFailed+"\n%s", err, string(tOut))
-				if strings.Contains(string(tOut), "checksum_amd64.s:") {
-					xerox := bufio.NewScanner(strings.NewReader(string(tOut)))
-					for xerox.Scan() {
-						if strings.Contains(xerox.Text(), "checksum_amd64.s:") {
-							split := strings.Split(xerox.Text(), ":")
-							lineStr := strings.TrimSpace(strings.Fields(split[1])[0])
-							line, _ := strconv.Atoi(lineStr)
-							t.Logf("test failed at line %d", line)
-							testXerox := bufio.NewScanner(strings.NewReader(string(asmOut)))
-							lc := 0
-							for testXerox.Scan() {
-								l := testXerox.Text()
-								lc++
-								if lc == line {
-									l += "; <------ FAILED HERE"
-								}
-								t.Logf("%s", l)
-							}
-							break
-						}
-					}
-				}
+			var xerox *bufio.Scanner
+			if tOut, err = cmd.CombinedOutput(); err == nil {
+				goto breakout
 			}
+			cancel()
+			t.Errorf(testFailed+"\n%s", err, string(tOut))
+			if !strings.Contains(string(tOut), "checksum_amd64.s:") {
+				goto breakout
+			}
+			xerox = bufio.NewScanner(strings.NewReader(string(tOut)))
+			for xerox.Scan() {
+				if !strings.Contains(xerox.Text(), "checksum_amd64.s:") {
+					continue
+				}
+				split := strings.Split(xerox.Text(), ":")
+				lineStr := strings.TrimSpace(strings.Fields(split[1])[0])
+				line, _ := strconv.Atoi(lineStr)
+				t.Logf("test failed at line %d", line)
+				testXerox := bufio.NewScanner(strings.NewReader(string(asmOut)))
+				lc := 0
+				for testXerox.Scan() {
+					l := testXerox.Text()
+					lc++
+					if lc == line {
+						l += "; <------ FAILED HERE"
+					}
+					t.Logf("%s", l)
+				}
+				break
 
+			}
+		breakout:
 			select {
 			case <-ctx.Done():
 				t.Fatalf("timed out waiting for test to complete")

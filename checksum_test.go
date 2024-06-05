@@ -1,4 +1,4 @@
-package kayosasm
+package asm
 
 import "testing"
 

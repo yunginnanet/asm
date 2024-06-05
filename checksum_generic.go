@@ -1,4 +1,4 @@
-package kayosasm
+package asm
 
 func rfc1071(data []byte) uint16 {
 	dataSize := len(data)

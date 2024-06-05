@@ -1,4 +1,4 @@
-module kayosasm
+module asm
 
 go 1.22.3
 

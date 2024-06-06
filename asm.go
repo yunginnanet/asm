@@ -63,6 +63,7 @@ func store(src reg.Register, dst gotypes.Component) {
 
 func define(funcName string, argName string, argType string, ret string) {
 	build.TEXT(funcName, 0, fmt.Sprintf("func(%s %s) %s", argName, argType, ret))
+	build.ConstraintExpr("amd64")
 }
 
 func zero(reg reg.Register) {
@@ -212,18 +213,19 @@ func main() {
 	// -----
 
 	// 256 --> 128
-	unpacked128 := build.XMM()
-	// extract high 128-bits of vectorSum into unpacked128
-	build.VEXTRACTI128(constant(1), vectorSum, unpacked128)
+	unpacked128 := build.YMM()
+	// (V)ector (PERM)ute (2) (I)nteger (128) - i gotta say i do not yet understand this shit right here
+	// reference: https://www.officedaytime.com/simd512e/simdimg/si.php?f=vperm2f128 (reaction: lmao what)
+	build.VPERM2I128(constant(0x01), vectorSum.AsY(), vectorSum.AsY(), unpacked128.AsY())
 	// add unpacked to vectorSum, storing result in vectorSum
-	build.VPADDW(vectorSum.AsY(), vectorSum.AsY(), unpacked128.AsY())
+	build.VPADDW(vectorSum, vectorSum, unpacked128)
 
-	build.VEXTRACTI128(constant(0), vectorSum, unpacked128)
+	/*build.VEXTRACTI128(constant(0), vectorSum, unpacked128)
 	build.VPADDW(vectorSum.AsY(), vectorSum.AsY(), unpacked128.AsY())
-
+	*/
 	// 128 --> 64
 	tmp128 := build.XMM()
-	build.VMOVDQU(tmp128, vectorSum.AsX())
+	build.VMOVDQU(tmp128.AsX(), vectorSum.AsX())
 
 	tmp64 := gp64()
 	// mov lower 32 bits of tmp128 to tmp64
